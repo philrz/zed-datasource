@@ -12,8 +12,12 @@ import {
 import { MyQuery, MyDataSourceOptions, defaultQuery } from './types';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
+  url: string;
+
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
+
+    this.url = instanceSettings.jsonData.url || 'http://localhost:9867';
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
@@ -37,10 +41,18 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   async testDatasource() {
-    // Implement a health check for your data source.
-    return {
-      status: 'success',
-      message: 'Success',
-    };
+    const url = this.url + '/version';
+
+    try {
+      var response = await fetch(url);
+      if (response.ok) {
+        let data = await response.json();
+        return { status: 'success', message: 'Success - Lake version ' + data.version };
+      } else {
+        return { status: 'error', message: 'Failure - HTTP status code ' + response.status };
+      }
+    } catch (err) {
+      return { status: 'error', message: 'Failure - Could not contact lake at ' + url };
+    }
   }
 }
