@@ -1,5 +1,3 @@
-import defaults from 'lodash/defaults';
-
 import {
   DataQueryRequest,
   DataQueryResponse,
@@ -9,7 +7,9 @@ import {
   FieldType,
 } from '@grafana/data';
 
-import { MyQuery, MyDataSourceOptions, defaultQuery } from './types';
+import { getBackendSrv } from '@grafana/runtime';
+
+import { MyQuery, MyDataSourceOptions } from './types';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   url: string;
@@ -20,24 +20,36 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     this.url = instanceSettings.jsonData.url || 'http://localhost:9867';
   }
 
-  async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
-    const { range } = options;
-    const from = range!.from.valueOf();
-    const to = range!.to.valueOf();
-
-    // Return a constant for each query.
-    const data = options.targets.map((target) => {
-      const query = defaults(target, defaultQuery);
-      return new MutableDataFrame({
-        refId: query.refId,
-        fields: [
-          { name: 'Time', values: [from, to], type: FieldType.time },
-          { name: 'Value', values: [query.constant, query.constant], type: FieldType.number },
-        ],
-      });
+  async doRequest(query: MyQuery) {
+    const result = await getBackendSrv().datasourceRequest({
+      method: 'POST',
+      url: this.url + '/query',
+      data: { query: 'from zeek | _path=="conn" | value:=count(resp_bytes) by every(1s)' },
     });
 
-    return { data };
+    return result;
+  }
+
+  async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
+    const promises = options.targets.map((query) =>
+      this.doRequest(query).then((response) => {
+        const frame = new MutableDataFrame({
+          refId: query.refId,
+          fields: [
+            { name: 'Time', type: FieldType.time },
+            { name: 'Value', type: FieldType.number },
+          ],
+        });
+
+        response.data.forEach((point: any) => {
+          frame.appendRow([point.ts, point.value]);
+        });
+
+        return frame;
+      })
+    );
+
+    return Promise.all(promises).then((data) => ({ data }));
   }
 
   async testDatasource() {
