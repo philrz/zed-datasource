@@ -21,10 +21,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   async doRequest(query: MyQuery) {
+    let zedquery = query.queryText || '*';
+    console.log('query text = ' + query.queryText);
     const result = await getBackendSrv().datasourceRequest({
       method: 'POST',
       url: this.url + '/query',
-      data: { query: 'from zeek | _path=="conn" | value:=count(resp_bytes) by every(1s)' },
+      data: { query: 'from zeek | ' + zedquery },
     });
 
     return result;
@@ -56,9 +58,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     const url = this.url + '/version';
 
     try {
-      var response = await fetch(url);
+      const response = await fetch(url);
       if (response.ok) {
-        let data = await response.json();
+        const data = await response.json();
         return { status: 'success', message: 'Success - Lake version ' + data.version };
       } else {
         return { status: 'error', message: 'Failure - HTTP status code ' + response.status };
