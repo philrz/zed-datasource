@@ -21,27 +21,12 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
-  onConstantChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, constant: parseFloat(event.target.value) });
-    // executes the query
-    onRunQuery();
-  };
-
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { queryText, constant } = query;
+    const { queryText } = query;
 
     return (
       <div className="gf-form">
-        <FormField
-          width={4}
-          value={constant}
-          onChange={this.onConstantChange}
-          label="Constant"
-          type="number"
-          step="0.1"
-        />
         <FormField
           labelWidth={8}
           value={queryText || ''}
@@ -50,7 +35,9 @@ export class QueryEditor extends PureComponent<Props> {
           tooltip="Zed Query"
           placeholder="*"
         />
-        <button style={{ background: '#F8771B', color: 'black' }}>Run Query</button>
+        <button style={{ background: '#F8771B', color: 'black' }} onClick={this.runQuery}>
+          Run Query
+        </button>
       </div>
     );
   }
