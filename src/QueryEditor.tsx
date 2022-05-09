@@ -29,6 +29,7 @@ export class QueryEditor extends PureComponent<Props> {
       <div className="gf-form">
         <FormField
           labelWidth={8}
+          inputWidth={30}
           value={queryText || ''}
           onChange={this.onQueryTextChange}
           label="Zed Query"
