@@ -16,6 +16,21 @@ export class QueryEditor extends PureComponent<Props> {
     onChange({ ...query, queryText: event.target.value });
   };
 
+  onPoolTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onChange, query } = this.props;
+    onChange({ ...query, pool: event.target.value });
+  };
+
+  onValueFieldTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onChange, query } = this.props;
+    onChange({ ...query, valueField: event.target.value });
+  };
+
+  onTimeFieldTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onChange, query } = this.props;
+    onChange({ ...query, timeField: event.target.value });
+  };
+
   runQuery = () => {
     const { onRunQuery } = this.props;
     onRunQuery();
@@ -23,22 +38,50 @@ export class QueryEditor extends PureComponent<Props> {
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { queryText } = query;
+    const { pool, queryText, valueField, timeField } = query;
 
     return (
-      <div className="gf-form">
-        <FormField
-          labelWidth={8}
-          inputWidth={30}
-          value={queryText || ''}
-          onChange={this.onQueryTextChange}
-          label="Zed Query"
-          tooltip="Zed Query"
-          placeholder="*"
-        />
-        <button style={{ background: '#F8771B', color: 'black' }} onClick={this.runQuery}>
-          Run Query
-        </button>
+      <div>
+        <div className="gf-form">
+          <FormField
+            labelWidth={8}
+            value={pool || ''}
+            onChange={this.onPoolTextChange}
+            label="From"
+            tooltip="poolname[@branch]"
+            placeholder="default"
+          />
+          <FormField
+            labelWidth={8}
+            inputWidth={30}
+            value={queryText || ''}
+            onChange={this.onQueryTextChange}
+            label="Zed Query"
+            tooltip="Zed Query"
+            placeholder="*"
+          />
+          <button style={{ background: '#F8771B', color: 'black' }} onClick={this.runQuery}>
+            Run Query
+          </button>
+        </div>
+        <div className="gf-form">
+          <FormField
+            labelWidth={8}
+            value={valueField || ''}
+            onChange={this.onValueFieldTextChange}
+            label="Value Field"
+            tooltip="Name of field for value to plot"
+            placeholder="value"
+          />
+          <FormField
+            labelWidth={8}
+            value={timeField || ''}
+            onChange={this.onTimeFieldTextChange}
+            label="Time Field"
+            tooltip="Name of time field"
+            placeholder="ts"
+          />
+        </div>
       </div>
     );
   }

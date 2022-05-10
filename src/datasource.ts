@@ -5,6 +5,7 @@ import {
   DataSourceInstanceSettings,
   MutableDataFrame,
   FieldType,
+  DateTime,
 } from '@grafana/data';
 
 import { getBackendSrv } from '@grafana/runtime';
@@ -20,21 +21,31 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     this.url = instanceSettings.jsonData.url || 'http://localhost:9867';
   }
 
-  async doRequest(query: MyQuery) {
-    let zedquery = query.queryText || '*';
-    console.log('query text = ' + query.queryText);
+  async doRequest(query: MyQuery, from: DateTime, to: DateTime) {
+    const pool = query.pool || 'default';
+    const zedQuery = query.queryText || '*';
+    const rangeFrom = from.toISOString();
+    const rangeTo = to.toISOString();
+    const wholeQuery = 'from ' + pool + ' range ' + rangeFrom + ' to ' + rangeTo + ' | ' + zedQuery;
+    console.log('Zed Query: ' + wholeQuery);
+
     const result = await getBackendSrv().datasourceRequest({
       method: 'POST',
       url: this.url + '/query',
-      data: { query: 'from zeek | ' + zedquery },
+      data: { query: wholeQuery },
     });
 
     return result;
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
+    const { range } = options;
+
     const promises = options.targets.map((query) =>
-      this.doRequest(query).then((response) => {
+      this.doRequest(query, range!.from, range!.to).then((response) => {
+        const valueField = query.valueField || 'value';
+        const timeField = query.timeField || 'ts';
+
         const frame = new MutableDataFrame({
           refId: query.refId,
           fields: [
@@ -44,7 +55,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         });
 
         response.data.forEach((point: any) => {
-          frame.appendRow([point.ts, point.value]);
+          frame.appendRow([point[timeField], point[valueField]]);
         });
 
         return frame;
@@ -61,12 +72,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        return { status: 'success', message: 'Success - Lake version ' + data.version };
+        return { status: 'success', message: 'Success - Zed lake version ' + data.version };
       } else {
         return { status: 'error', message: 'Failure - HTTP status code ' + response.status };
       }
     } catch (err) {
-      return { status: 'error', message: 'Failure - Could not contact lake at ' + url };
+      return { status: 'error', message: 'Failure - Could not contact Zed lake at ' + url };
     }
   }
 }

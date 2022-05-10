@@ -1,11 +1,17 @@
 import { DataQuery, DataSourceJsonData } from '@grafana/data';
 
 export interface MyQuery extends DataQuery {
+  pool?: string;
   queryText?: string;
+  valueField?: string;
+  timeField?: string;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
+  pool: '',
   queryText: '',
+  valueField: '',
+  timeField: '',
 };
 
 /**
