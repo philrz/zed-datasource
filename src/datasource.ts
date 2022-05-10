@@ -55,7 +55,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         });
 
         response.data.forEach((point: any) => {
-          frame.appendRow([point[timeField], point[valueField]]);
+          frame.appendRow([+new Date(point[timeField]), point[valueField]]);
         });
 
         return frame;
