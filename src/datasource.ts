@@ -24,9 +24,11 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   async doRequest(query: MyQuery, from: DateTime, to: DateTime) {
     const pool = query.pool || 'default';
     const zedQuery = query.queryText || '*';
+    const timeField = query.timeField || 'ts';
     const rangeFrom = from.toISOString();
     const rangeTo = to.toISOString();
-    const wholeQuery = 'from ' + pool + ' range ' + rangeFrom + ' to ' + rangeTo + ' | ' + zedQuery;
+    const wholeQuery =
+      'from ' + pool + ' range ' + rangeFrom + ' to ' + rangeTo + ' | ' + zedQuery + '| sort ' + timeField;
     console.log('Zed Query: ' + wholeQuery);
 
     const result = await getBackendSrv().datasourceRequest({
