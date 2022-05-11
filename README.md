@@ -91,6 +91,8 @@ on its installation and use.
 The following video walks through adding the plugin config inside Grafana and
 using it to plot sample data.
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/U_yZ0VZB7e8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 # Contributing
 
 The plugin was written while following the Grafana documentation to
