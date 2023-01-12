@@ -51,8 +51,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         const frame = new MutableDataFrame({
           refId: query.refId,
           fields: [
-            { name: 'Time', type: FieldType.time },
-            { name: 'Value', type: FieldType.number },
+            { name: timeField, type: FieldType.time },
+            { name: valueField, type: FieldType.number },
           ],
         });
 
