@@ -4,6 +4,7 @@
   "name": "Zed",
   "id": "brim-data-zed",
   "metrics": true,
+  "annotations": true,
   "info": {
     "description": "Zed lake",
     "author": {

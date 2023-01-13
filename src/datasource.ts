@@ -14,11 +14,13 @@ import { MyQuery, MyDataSourceOptions } from './types';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   url: string;
+  annotations: object;
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
 
     this.url = instanceSettings.jsonData.url || 'http://localhost:9867';
+    this.annotations = {};
   }
 
   async doRequest(query: MyQuery, from: DateTime, to: DateTime) {
