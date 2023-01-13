@@ -13,8 +13,7 @@ import { getBackendSrv } from '@grafana/runtime';
 import { MyQuery, MyDataSourceOptions } from './types';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
-  url: string;
-  annotations: object;
+  url: string;    // It's not clear to me why I needed this but not "annotations: object;"
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
