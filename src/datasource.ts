@@ -46,17 +46,11 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     const promises = options.targets.map((query) =>
       this.doRequest(query, range!.from, range!.to).then((response) => {
-        const valueField = query.valueField || 'value';
         const timeField = query.timeField || 'ts';
-
-        console.log('first row of response data:');
-        console.log(response.data[0]);
 
         var validFields: Array<{ name: string; type: FieldType }> = [];
         for (const key in response.data[0]) {
-          if (key === valueField) {
-            validFields.push({ name: valueField, type: FieldType.number });
-          } else if (key === timeField) {
+          if (key === timeField) {
             validFields.push({ name: timeField, type: FieldType.time });
           } else if (typeof response.data[0][key] === 'string') {
             validFields.push({ name: key, type: FieldType.string });
@@ -66,9 +60,6 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
             validFields.push({ name: key, type: FieldType.boolean });
           }
         }
-
-        console.log('validFields:');
-        console.log(validFields);
 
         const frame = new MutableDataFrame({
           refId: query.refId,
