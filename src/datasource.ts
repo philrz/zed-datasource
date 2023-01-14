@@ -13,7 +13,7 @@ import { getBackendSrv } from '@grafana/runtime';
 import { MyQuery, MyDataSourceOptions } from './types';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
-  url: string;    // It's not clear to me why I needed this but not "annotations: object;"
+  url: string; // It's not clear to me why I needed this but not "annotations: object;"
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
@@ -49,16 +49,42 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         const valueField = query.valueField || 'value';
         const timeField = query.timeField || 'ts';
 
+        console.log('first row of response data:');
+        console.log(response.data[0]);
+
+        var validFields: Array<{ name: string; type: FieldType }> = [];
+        for (const key in response.data[0]) {
+          if (key === valueField) {
+            validFields.push({ name: valueField, type: FieldType.number });
+          } else if (key === timeField) {
+            validFields.push({ name: timeField, type: FieldType.time });
+          } else if (typeof response.data[0][key] === 'string') {
+            validFields.push({ name: key, type: FieldType.string });
+          } else if (typeof response.data[0][key] === 'number') {
+            validFields.push({ name: key, type: FieldType.number });
+          } else if (typeof response.data[0][key] === 'boolean') {
+            validFields.push({ name: key, type: FieldType.boolean });
+          }
+        }
+
+        console.log('validFields:');
+        console.log(validFields);
+
         const frame = new MutableDataFrame({
           refId: query.refId,
-          fields: [
-            { name: timeField, type: FieldType.time },
-            { name: valueField, type: FieldType.number },
-          ],
+          fields: validFields,
         });
 
         response.data.forEach((point: any) => {
-          frame.appendRow([+new Date(point[timeField]), point[valueField]]);
+          frame.appendRow(
+            validFields.map(function (f) {
+              if (f.name === timeField) {
+                return +new Date(point[f.name]);
+              } else {
+                return point[f.name];
+              }
+            })
+          );
         });
 
         return frame;
