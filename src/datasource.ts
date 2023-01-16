@@ -8,7 +8,7 @@ import {
   DateTime,
 } from '@grafana/data';
 
-import { getBackendSrv } from '@grafana/runtime';
+import { getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 
 import { MyQuery, MyDataSourceOptions } from './types';
 
@@ -22,7 +22,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     this.annotations = {};
   }
 
-  async doRequest(query: MyQuery, from: DateTime, to: DateTime) {
+  async doRequest(query: MyQuery, from: DateTime, to: DateTime, options: DataQueryRequest<MyQuery>) {
     const pool = query.pool || 'default';
     const zedQuery = query.queryText || '*';
     const timeField = query.timeField || 'ts';
@@ -43,12 +43,14 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       zedQuery +
       ' | sort ' +
       timeField;
-    console.log('Zed Query: ' + wholeQuery);
+    console.log('Zed Query before applying variables: ' + wholeQuery);
+    const finalQuery = getTemplateSrv().replace(wholeQuery, options.scopedVars);
+    console.log('Zed Query after applying variables: ' + finalQuery);
 
     const result = await getBackendSrv().datasourceRequest({
       method: 'POST',
       url: this.url + '/query',
-      data: { query: wholeQuery },
+      data: { query: finalQuery },
     });
 
     return result;
@@ -58,7 +60,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     const { range } = options;
 
     const promises = options.targets.map((query) =>
-      this.doRequest(query, range!.from, range!.to).then((response) => {
+      this.doRequest(query, range!.from, range!.to, options).then((response) => {
         const timeField = query.timeField || 'ts';
 
         var validFields: Array<{ name: string; type: FieldType }> = [];
