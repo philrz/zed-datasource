@@ -29,7 +29,20 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     const rangeFrom = from.toISOString();
     const rangeTo = to.toISOString();
     const wholeQuery =
-      'from ' + pool + ' range ' + rangeFrom + ' to ' + rangeTo + ' | ' + zedQuery + ' | sort ' + timeField;
+      'from ' +
+      pool +
+      ' | ' +
+      timeField +
+      ' > ' +
+      rangeFrom +
+      ' and ' +
+      timeField +
+      ' < ' +
+      rangeTo +
+      ' | ' +
+      zedQuery +
+      ' | sort ' +
+      timeField;
     console.log('Zed Query: ' + wholeQuery);
 
     const result = await getBackendSrv().datasourceRequest({
@@ -51,7 +64,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         var validFields: Array<{ name: string; type: FieldType }> = [];
         for (const key in response.data[0]) {
           if (key === timeField) {
-            validFields.push({ name: timeField, type: FieldType.time });
+            validFields.push({ name: key, type: FieldType.time });
           } else if (typeof response.data[0][key] === 'string') {
             validFields.push({ name: key, type: FieldType.string });
           } else if (typeof response.data[0][key] === 'number') {
