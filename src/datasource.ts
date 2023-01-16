@@ -44,7 +44,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       ' | sort ' +
       timeField;
     console.log('Zed Query before applying variables: ' + wholeQuery);
-    const finalQuery = getTemplateSrv().replace(wholeQuery, options.scopedVars);
+    const finalQuery = getTemplateSrv().replace(wholeQuery, options.scopedVars, 'csv');
     console.log('Zed Query after applying variables: ' + finalQuery);
 
     const result = await getBackendSrv().datasourceRequest({
