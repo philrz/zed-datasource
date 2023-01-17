@@ -56,10 +56,10 @@ export class QueryEditor extends PureComponent<Props> {
           />
         </div>
         <div className="gf-form">
-          <TextArea value={queryText || ''} onChange={this.onQueryTextChange} label="Zed Query" placeholder="*" />
           <button style={{ background: '#F8771B', color: 'black' }} onClick={this.runQuery}>
             Run Query
           </button>
+          <TextArea value={queryText || ''} onChange={this.onQueryTextChange} label="Zed Query" placeholder="*" />
         </div>
       </div>
     );
