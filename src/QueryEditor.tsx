@@ -21,11 +21,6 @@ export class QueryEditor extends PureComponent<Props> {
     onChange({ ...query, pool: event.target.value });
   };
 
-  onValueFieldTextChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onChange, query } = this.props;
-    onChange({ ...query, valueField: event.target.value });
-  };
-
   onTimeFieldTextChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query } = this.props;
     onChange({ ...query, timeField: event.target.value });
@@ -38,7 +33,7 @@ export class QueryEditor extends PureComponent<Props> {
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { pool, queryText, valueField, timeField } = query;
+    const { pool, queryText, timeField } = query;
 
     return (
       <div>
@@ -53,6 +48,16 @@ export class QueryEditor extends PureComponent<Props> {
           />
           <FormField
             labelWidth={8}
+            value={timeField || ''}
+            onChange={this.onTimeFieldTextChange}
+            label="Time Field"
+            tooltip="Name of time field"
+            placeholder="ts"
+          />
+        </div>
+        <div className="gf-form">
+          <FormField
+            labelWidth={8}
             inputWidth={30}
             value={queryText || ''}
             onChange={this.onQueryTextChange}
@@ -63,24 +68,6 @@ export class QueryEditor extends PureComponent<Props> {
           <button style={{ background: '#F8771B', color: 'black' }} onClick={this.runQuery}>
             Run Query
           </button>
-        </div>
-        <div className="gf-form">
-          <FormField
-            labelWidth={8}
-            value={valueField || ''}
-            onChange={this.onValueFieldTextChange}
-            label="Value Field"
-            tooltip="Name of field for value to plot"
-            placeholder="value"
-          />
-          <FormField
-            labelWidth={8}
-            value={timeField || ''}
-            onChange={this.onTimeFieldTextChange}
-            label="Time Field"
-            tooltip="Name of time field"
-            placeholder="ts"
-          />
         </div>
       </div>
     );
