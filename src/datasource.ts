@@ -23,11 +23,36 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   async doRequest(query: MyQuery, from: DateTime, to: DateTime, options: DataQueryRequest<MyQuery>) {
-    const pool = query.pool || 'default';
+    const pool = query.pool;
     const zedQuery = query.queryText || '*';
     const timeField = query.timeField || 'ts';
     const rangeFrom = from.toISOString();
     const rangeTo = to.toISOString();
+
+    console.log('Value of "pool" going in:');
+    console.log(pool);
+    if (pool === undefined) {
+      const pools = await getBackendSrv().datasourceRequest({
+        method: 'POST',
+        url: this.url + '/query',
+        data: { query: 'from :pools | cut name' },
+      });
+      if (pools.data.length === 0) {
+        throw new Error('No pools found in lake at ' + this.url);
+      } else {
+        throw new Error(
+          'Pool must be specified in "From". Available pools in lake at ' +
+            this.url +
+            ': ' +
+            pools.data
+              .map((p: { [x: string]: any }) => {
+                return p['name'];
+              })
+              .join()
+        );
+      }
+    }
+
     const wholeQuery =
       'from ' +
       pool +
@@ -46,6 +71,20 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     console.log('Zed Query before applying variables: ' + wholeQuery);
     const finalQuery = getTemplateSrv().replace(wholeQuery, options.scopedVars, 'csv');
     console.log('Zed Query after applying variables: ' + finalQuery);
+
+    // The Zui app is able to show its "Shapes:" count withut a special query,
+    // so once I learn how I should be able to do much the same.
+    const shapeQuery = finalQuery + ' | by typeof(this) | count() | yield count > 1';
+    const shapeCount = await getBackendSrv().datasourceRequest({
+      method: 'POST',
+      url: this.url + '/query',
+      data: { query: shapeQuery },
+    });
+    if (shapeCount.data.length === 0) {
+      throw new Error('No data points found to plot in this time range');
+    } else if (shapeCount.data[0] > 1) {
+      throw new Error('More than one shape detected (consider using "cut" or "fuse")');
+    }
 
     const result = await getBackendSrv().datasourceRequest({
       method: 'POST',
@@ -87,7 +126,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
               if (f.name === timeField) {
                 return +new Date(point[f.name]);
               } else {
-                return point[f.name];
+                return point[f.name] == null ? 0 : point[f.name];
               }
             })
           );

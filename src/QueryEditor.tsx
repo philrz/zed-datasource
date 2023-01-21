@@ -44,7 +44,6 @@ export class QueryEditor extends PureComponent<Props> {
             onChange={this.onPoolTextChange}
             label="From"
             tooltip="poolname[@branch]"
-            placeholder="default"
           />
           <FormField
             labelWidth={8}
