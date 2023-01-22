@@ -29,8 +29,6 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     const rangeFrom = from.toISOString();
     const rangeTo = to.toISOString();
 
-    console.log('Value of "pool" going in:');
-    console.log(pool);
     if (pool === undefined) {
       const pools = await getBackendSrv().datasourceRequest({
         method: 'POST',
@@ -72,10 +70,10 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     const finalQuery = getTemplateSrv().replace(wholeQuery, options.scopedVars, 'csv');
     console.log('Zed Query after applying variables: ' + finalQuery);
 
-    // The Zui app is able to show its "Shapes:" count withut a separate query,
-    // so once we move the plugin to the Zealot client we should be able to do
+    // The Zui app is able to show its "Shapes:" count withut a separate query.
+    // Once we move the plugin to the Zealot client we should be able to do
     // the same.
-    const shapeQuery = finalQuery + ' | by typeof(this) | count() | yield count > 1';
+    const shapeQuery = finalQuery + ' | by typeof(this) | count() | yield count';
     const shapeCount = await getBackendSrv().datasourceRequest({
       method: 'POST',
       url: this.url + '/query',
