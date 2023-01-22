@@ -72,8 +72,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     const finalQuery = getTemplateSrv().replace(wholeQuery, options.scopedVars, 'csv');
     console.log('Zed Query after applying variables: ' + finalQuery);
 
-    // The Zui app is able to show its "Shapes:" count withut a special query,
-    // so once I learn how I should be able to do much the same.
+    // The Zui app is able to show its "Shapes:" count withut a separate query,
+    // so once we move the plugin to the Zealot client we should be able to do
+    // the same.
     const shapeQuery = finalQuery + ' | by typeof(this) | count() | yield count > 1';
     const shapeCount = await getBackendSrv().datasourceRequest({
       method: 'POST',
@@ -85,6 +86,63 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     } else if (shapeCount.data[0] > 1) {
       throw new Error('More than one shape detected (consider using "cut" or "fuse")');
     }
+
+    // Find all the fields that will be added to the data frame. The time
+    // field is always made the leftmost field since black box testing has
+    // indicated that if there's multiple time-typed fields Grafana will use
+    // the leftmost one.
+    const frameQuery = finalQuery + ' | head 1 | over this =>  ( yield {key:key[0],type:typeof(value)} )';
+    const fieldsInfo = await getBackendSrv().datasourceRequest({
+      method: 'POST',
+      url: this.url + '/query',
+      data: { query: frameQuery },
+    });
+    console.log('fieldsInfo:');
+    console.log(fieldsInfo);
+    var frameFields: Array<{ name: string; type: FieldType }> = [];
+    fieldsInfo.data.forEach((point: any) => {
+      if (point.key === timeField) {
+        frameFields.unshift({ name: point.key, type: FieldType.time });
+      } else if (
+        point.type === '<uint8>' ||
+        point.type === '<uint16>' ||
+        point.type === '<uint32>' ||
+        point.type === '<uint64>' ||
+        point.type === '<uint128>' ||
+        point.type === '<uint256>' ||
+        point.type === '<int8>' ||
+        point.type === '<int16>' ||
+        point.type === '<int32>' ||
+        point.type === '<int64>' ||
+        point.type === '<int128>' ||
+        point.type === '<int256>' ||
+        point.type === '<float16>' ||
+        point.type === '<float32>' ||
+        point.type === '<float64>' ||
+        point.type === '<float128>' ||
+        point.type === '<float256>' ||
+        point.type === '<decimal32>' ||
+        point.type === '<decimal64>' ||
+        point.type === '<decimal128>' ||
+        point.type === '<decimal256>'
+      ) {
+        frameFields.push({ name: point.key, type: FieldType.number });
+      } else if (
+        point.type === '<string>' ||
+        point.type === '<ip>' ||
+        point.type === '<net>' ||
+        point.type === '<type>' ||
+        point.type === '<bytes>'
+      ) {
+        frameFields.push({ name: point.key, type: FieldType.string });
+      } else if (point.type === '<time>') {
+        frameFields.push({ name: point.key, type: FieldType.time });
+      } else if (point.type === '<bool>') {
+        frameFields.push({ name: point.key, type: FieldType.boolean });
+      }
+    });
+    console.log('frameFields:');
+    console.log(frameFields);
 
     const result = await getBackendSrv().datasourceRequest({
       method: 'POST',
