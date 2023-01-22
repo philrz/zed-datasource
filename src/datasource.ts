@@ -150,28 +150,17 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       data: { query: finalQuery },
     });
 
-    return result;
+    return { f: frameFields, r: result };
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
     const { range } = options;
 
     const promises = options.targets.map((query) =>
-      this.doRequest(query, range!.from, range!.to, options).then((response) => {
+      this.doRequest(query, range!.from, range!.to, options).then((foo) => {
         const timeField = query.timeField || 'ts';
-
-        var validFields: Array<{ name: string; type: FieldType }> = [];
-        for (const key in response.data[0]) {
-          if (key === timeField) {
-            validFields.push({ name: key, type: FieldType.time });
-          } else if (typeof response.data[0][key] === 'string') {
-            validFields.push({ name: key, type: FieldType.string });
-          } else if (typeof response.data[0][key] === 'number') {
-            validFields.push({ name: key, type: FieldType.number });
-          } else if (typeof response.data[0][key] === 'boolean') {
-            validFields.push({ name: key, type: FieldType.boolean });
-          }
-        }
+        const response = foo.r;
+        const validFields = foo.f;
 
         const frame = new MutableDataFrame({
           refId: query.refId,
@@ -184,7 +173,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
               if (f.name === timeField) {
                 return +new Date(point[f.name]);
               } else {
-                return point[f.name] == null ? 0 : point[f.name];
+                return point[f.name];
               }
             })
           );
