@@ -99,6 +99,13 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     console.log(fieldsInfo);
     var frameFields: Array<{ name: string; type: FieldType }> = [];
     fieldsInfo.data.forEach((point: any) => {
+      // Black box testing has shown that a field named the empty string ""
+      // ends up in Grafana with a confusing name in the legend like
+      // "Field 2". Therefore we'll handle it as a special case.
+      if (point.key === '') {
+        point.key = '(empty string)';
+      }
+
       if (point.key === timeField) {
         frameFields.unshift({ name: point.key, type: FieldType.time });
       } else if (
@@ -168,6 +175,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
             r.frameFields.map(function (f) {
               if (f.name === timeField) {
                 return +new Date(point[f.name]);
+              } else if (f.name === '(empty string)') {
+                return point[''];
               } else {
                 return point[f.name];
               }
