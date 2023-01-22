@@ -150,26 +150,24 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       data: { query: finalQuery },
     });
 
-    return { f: frameFields, r: result };
+    return { frameFields: frameFields, response: result };
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
     const { range } = options;
 
     const promises = options.targets.map((query) =>
-      this.doRequest(query, range!.from, range!.to, options).then((foo) => {
+      this.doRequest(query, range!.from, range!.to, options).then((r) => {
         const timeField = query.timeField || 'ts';
-        const response = foo.r;
-        const validFields = foo.f;
 
         const frame = new MutableDataFrame({
           refId: query.refId,
-          fields: validFields,
+          fields: r.frameFields,
         });
 
-        response.data.forEach((point: any) => {
+        r.response.data.forEach((point: any) => {
           frame.appendRow(
-            validFields.map(function (f) {
+            r.frameFields.map(function (f) {
               if (f.name === timeField) {
                 return +new Date(point[f.name]);
               } else {
