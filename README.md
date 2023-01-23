@@ -8,7 +8,7 @@ that's stored in [Zed lakes](https://zed.brimdata.io/docs/commands/zed/).
 
 As it's a prototype, these installation instructions effectively show how to
 get the plugin running in a way that would allow for its further development.
-I happen to use macOS on the desktop, so these instructions cover that case.
+The instructions below show how to do this with macOS.
 
 1. Install Grafana and needed development tools
 
@@ -53,11 +53,12 @@ username `admin` and password `admin`.
 
 # Zed & CORS
 
-Unfortunately, due to a problem with [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS),
-this plugin cannot currently interact with the API for out-of-the-box Zed lake.
+Unfortunately, due to [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS),
+this plugin cannot currently interact with the API for an out-of-the-box Zed lake.
 Issue [zed/4297](https://github.com/brimdata/zed/issues/4297) tracks the proper
-fix. In the meantime, it's possible to work around the issue by building Zed
-from the [grafana-cors-hack](https://github.com/brimdata/zed/tree/grafana-cors-hack) branch.
+enhancement to address this. In the meantime, it's possible to work around the
+issue by building Zed from the
+[grafana-cors-hack](https://github.com/brimdata/zed/tree/grafana-cors-hack) branch.
 
 To compile and start the Zed service:
 
@@ -71,8 +72,8 @@ make build
 # Best Practices
 
 Zed is not a purpose-built time-series database. However, as a general data
-platform, it can absolutely be used for storage and query of such data at
-moderate scale.
+platform, it can absolutely be used for storage and query of time-series data
+at moderate scale.
 
 In its current state, the plugin relies on the use of Zed queries that
 prepare data for easy conversion to the
@@ -80,52 +81,62 @@ prepare data for easy conversion to the
 that Grafana ultimately uses for rendering plots. Some best practices that
 help achieve this:
 
-1. The field used as the timestamp for your time-series data should ideally be
-your [pool key](https://zed.brimdata.io/docs/commands/zed#143-pool-key).
+1. **The field used as the timestamp for your time-series data should ideally be
+your [pool key](https://zed.brimdata.io/docs/commands/zed#143-pool-key).**
 
-This
-way time range queries initiated in the Grafana dashboard will scan only the
-minimal number of data objects relevant to the query.
+   This way time range portion of queries initiated via the Grafana dashboard
+   will scan only the minimal number of data objects in the Zed lake that are
+   relevant to the query.
 
-2. If possible, name your pool `default` and your timestamp field `ts`.
+2. **If possible, use `ts` as the name for your timestamp field.**
 
-These names match the "out of the box" default settings for the plugin.
-However, the plugin can easily be configured to adapt to different names for
-your environment.
+   This field name matches the "out of the box" default settings for the plugin.
+   However, the plugin can easily be configured to adapt to a different field
+   name.
 
-3. Your time-series data should ideally be of a single
-[shape](https://zed.brimdata.io/docs/language/overview#10-shaping).
+3. **Your time-series data should be of a single [shape](https://zed.brimdata.io/docs/language/overview#10-shaping).**
 
-This is because the plugin uses the fields in the first row of returned query
-results to create the fields in the data frame that will ultimately store the
-points rendered by Grafana, so rows of a different shape later returned that
-have more/different fields will not fit into the data frame and the plots will
-therefore have unpredictable output. If your data has multiple shapes, use
-the [`fuse`](https://zed.brimdata.io/docs/language/operators/fuse) operator in
-your query to widen it to a single shape that incorporates all fields.
-
-4. Convert any `null` values in your numeric fields to `0`.
+   Grafana's columnar data frames need to be constructed with a specific list
+   of expected fields. Therefore the count of shapes returned by a query is
+   first checked by the plugin and an error is shown if more than one shape is
+   detected. If this occurs, the easiest way to address it is likely to use
+   the [`cut` operator](https://zed.brimdata.io/docs/language/operators/cut)
+   to trim the set of fields returned by the query or the
+   [`fuse` operator](https://zed.brimdata.io/docs/language/operators/fuse) to
+   combine the entire query result into a singe, wider shape.
 
 Next we'll walk through some real world examples that leverage these best
 practices.
 
 # Configuration
 
+The Zed data source can be added in Grafana via the
+**Configuration > Data Sources** menu. If a lake service is listening locally
+on the default TCP port `9867` (as is typical for the lake launched by the
+Brim/Zui app or when `zed serve` is run by hand) the default URL setting can
+be used. If your lake is listening elsewhere (e.g., with Zui Insiders it's at
+http://localhost:9988) change the URL setting appropriately. When
+**Save & test** is clicked, the plugin will attempt to return the value from
+check the lake's `/version` endpoint. If successful, the plugin is ready for
+use in dashbard panel queries.
+
+![Configure and Test Zed Data Source](config-zed-data-source.png)
+
 # Example Usage in Dashboards
 
 As described [here](https://kb.altinity.com/altinity-kb-schema-design/best-schema-for-storing-many-metrics-registered-from-the-single-source/),
-we often encounter different schema approaches for time-series data. The Zed
+different schema approaches are often used for storing time-series data. The Zed
 plugin can adapt to multiple approaches, but the Zed query used in the Grafana
 panel will differ. In each of the following sections we'll plot some sample
 time-series data to illustrate the concepts.
 
 ## One row per metric
 
-An example of this approach is the
-["Weekly fuel prices (all data)"](https://dgsaie.mise.gov.it/open_data_export.php?export-id=4&export-type=csv)
+An example that uses this approach is the
+[Weekly fuel prices (all data)](https://dgsaie.mise.gov.it/open_data_export.php?export-id=4&export-type=csv)
 link in the [Italian fuel price data](https://dgsaie.mise.gov.it/open-data) that's freely
 available under the [IODL 2.0 license](https://it.wikipedia.org/wiki/Italian_Open_Data_License).
-We'll start by downloading a copy with the English langauge column headers and
+We'll start by downloading a copy with the English language column headers and
 peek at the data in its original form.
 
 ```
@@ -146,31 +157,33 @@ SURVEY_DATE,PRODUCT_ID,PRODUCT_NAME,PRICE,VAT,EXCISE,NET,CHANGE
 2005-01-10,3,"Heating gas oil",947.94,157.99,403.21,386.74,-0.56
 ```
 
-Per the appaoch, we see that the datestamp is repeated for the measurement of
-each of the six differnet fuel types. Also, being CSV data, this date field
+Per the approach, we see that the date stamp is repeated for the measurement of
+each of the six different fuel types. Also, being CSV data, this date field
 begins life as a mere string and therefore should be converted to the Zed
-`time` type as we're storing it in the lake, since this will allow the values
+`time` type as we're storing it in the lake. This will allow the values
 to be used in time range selections in Grafana that will then be used in the
-Zed queries that gather points relevant to a given plot.
+generated Zed queries that gather points for plotting.
 
-Taking this into account, we'll perform this conversion with `zq` while also
-isolating a subset of the fields and ultimately loading the data into a pool
-in our Zed lake. For convenience, we'll use `ts` as the name of the converted
-time field since this is the plugin's expected default.
+Taking this into account, we'll perform some preprocessing with with `zq` to
+prepare the timestamp field and also isolate a subset of the fields, then
+ultimately load the data into a pool in our Zed lake. For convenience, we'll
+use `ts` as the name of the converted time field since this is the plugin's
+default.
 
 ```
-$ zed create default
+$ zed create prices1
+pool created: prices1 2KkHUfmYz7FDdix6WRf7XEjkRfO
 
 $ zq 'cut ts:=time(SURVEY_DATE),PRODUCT_NAME,PRICE' all_prices.csv \
-  | zed -use default load -
+  | zed -use prices1 load -
 (2/1) 75.95KB 75.95KB/s
-2KbV5PBvsphUJP9kbd80ky0gOU9 committed
+2KkHZEIfCdlCQJcgO9TAGT8cNpz committed
 ```
 
 Reading back a sampling of our data, we can see the successful conversion.
 
 ```
-$ zed query -Z 'from default | sample'
+$ zed query -Z 'from prices1 | sample'
 {
     ts: 2023-01-16T00:00:00Z,
     PRODUCT_NAME: "Automotive gas oil",
@@ -178,15 +191,22 @@ $ zed query -Z 'from default | sample'
 }
 ```
 
-To plot the data for all fuel types in the same panel, we can construct six
-different queries that filter them by category. Since the legend would
+To plot the data for all six fuel types in the same panel, we can construct
+six queries, each of which filters by category. Since the legend would
 otherwise show "PRICE" for all six, we'll use Zed's
-[`rename`](https://zed.brimdata.io/docs/language/operators/rename) operator to
+[`rename` operator](https://zed.brimdata.io/docs/language/operators/rename)  to
 assign a unique field name for each before the data is handed off to Grafana.
 Because we want to construct field names with spaces, we use
 [field dereferencing with indexing](https://zed.brimdata.io/docs/language/overview#75-field-dereference).
 
-![Img1](img1.png)
+Below is an example of one of the six queries, followed by the completed panel
+shown in Grafana.
+
+```
+PRODUCT_NAME=="Automotive gas oil" | rename this["Automotive gas oil"]:=PRICE
+```
+
+![Example with one row per metric](prices1.png)
 
 ## Each measurement (with lot of metrics) in its own row
 
@@ -206,6 +226,21 @@ SURVEY_DATE,EURO-SUPER_95,AUTOMOTIVE_GAS_OIL,LPG,HEATING_GAS_OIL,RESIDUAL_FUEL_O
 2005-01-03,1115.75,1018.28,552.5,948.5,553.25,229.52
 2005-01-10,1088,1004.39,552.57,947.94,554.22,238.37
 2005-01-17,1088.14,1004.31,551.88,952.42,562.78,245.89
+```
+
+As we see, there's now a separate column in the CSV file for each category of fuel
+and each row of measurements appears with a single, shared date stamp. We'll
+create a separate pool and once again convert the date stamp to a Zed `time`
+field as we load it into our lake.
+
+```
+$ zed create prices2
+pool created: prices2 2KkJGc9sgl2T7eq5rB0WSff26IV
+
+$ zq 'rename ts:=SURVEY_DATE | ts:=time(ts)' prices2.csv \
+  | zed -use prices2 load -
+(2/1) 30.29KB 30.29KB/s
+2Kbf3eLGvItvbxLA2TMQyaCab2W committed
 
 $ zed query -Z 'from prices2 | head 1'
 {
@@ -219,26 +254,12 @@ $ zed query -Z 'from prices2 | head 1'
 }
 ```
 
-As we see, there's now a separate column in the CSV for each category of fuel
-and each row of measurements appears with a single, shared datestamp. We'll
-create a separate pool and once again convert the datestamp to a Zed `time`
-field as we load it into our lake.
-
-```
-$ zed create prices2
-
-$ zq 'rename ts:=SURVEY_DATE | ts:=time(ts)' prices2.csv \
-  | zed -use prices2 load -
-(2/1) 30.29KB 30.29KB/s
-2Kbf3eLGvItvbxLA2TMQyaCab2W committed
-```
-
 Because Grafana defaults to plotting all numeric fields, all six appear on our
-chart by just using the default `*` Zed query that pulls all points from the
-pool. The only setting we had to change in our panel configuration was to
-specify the pool name "prices2".
+chart if we let the plugin use its default Zed query (`*`) that pulls all points
+from the pool. The only setting we had to change in our panel configuration was
+to specify the pool name "prices2".
 
-![Img2](img2.png)
+![Example with many metrics per row](prices2.png)
 
 If we wanted prettier names in the legend, we could add a Zed query to our
 panel config such as:
@@ -251,6 +272,37 @@ rename this["Euro Super 95"] := this["EURO-SUPER_95"],
        this["Heavy Fuel Oil"]:=this["HEAVY_FUEL_OIL"]
 ```
 
+## Converting between approaches
+
+Now that we've seen the second approach makes it easier to plot, if you find
+yourself with data that's already stored using the first approach, you could use
+Zed like what's shown below to convert to the second approach. This idiom could
+be used to preprocess the data before loading it into yet another pool, or you
+could use it as part of a Zed query in your Grafana panel config.
+
+```
+$ zed query -Z 'from prices1
+                | map(|{PRODUCT_NAME:PRICE}|) by ts
+                | over map with time=ts => (
+                  yield {key:[key],value}
+                  | collect(this)
+                  | yield collect
+                  | unflatten(this)
+                  | put ts:=time
+                )'
+
+{
+    LPG: 799.71,
+    "Euro-Super 95": 1813.58,
+    "Heavy fuel oil": 636.78,
+    "Heating gas oil": 1651.57,
+    "Residual fuel oil": 1120.82,
+    "Automotive gas oil": 1863.68,
+    ts: 2023-01-16T00:00:00Z
+}
+...
+```
+
 ## Variables
 
 The plugin does not yet support [query variables](https://grafana.com/docs/grafana/latest/developers/plugins/add-support-for-variables/#add-support-for-query-variables-to-your-data-source)
@@ -261,7 +313,7 @@ dashboard settings as long as the set of picked values can be expanded into
 syntactically correct Zed.
 
 Building on our prior example, here we've defined a multi-value variable called
-"fuels" made up of the six categoies of our data.
+"fuels" made up of the six categories of our data.
 
 ![Img3](img3.png)
 
@@ -270,25 +322,26 @@ Returning to our dashboard, we now can enter a Zed query that uses
 isolate only the timestamp field and the expanded variable that holds our set
 of picked fuels. Notice that we once again made use of
 [field dereferencing with indexing](https://zed.brimdata.io/docs/language/overview#75-field-dereference)
-for the field `EURO-SUPER_95` since it can't be referened as an identifier due
+for the field `EURO-SUPER_95` since it can't be referenced as an identifier due
 to its use of the character `-`.
 
 ![Img3](img4.png)
 
 ## Aggregations and the `$__interval` variable
 
-The examples shown thus far all assume that all points in the selected time
+The examples shown thus far assume that all points in the selected time range
 should be plotted at their precise values. However, in practice, screen width
 and/or volume of data may make this undesirable or impossible. In these
 situations it's typical to [summarize](https://zed.brimdata.io/docs/language/operators/summarize)
 time-bucketed sets of points into single values that can populate a smaller
-number of points rendered in a chart. This summarization is done by applying
-an [aggregate function](https://zed.brimdata.io/docs/language/aggregates) to
-each set of raw points, such as [`avg()`](https://zed.brimdata.io/docs/language/aggregates/avg),
+number of pixels rendered in a chart. This summarization is done by applying
+an [aggregate function](https://zed.brimdata.io/docs/language/aggregates) such
+as [`avg()`](https://zed.brimdata.io/docs/language/aggregates/avg),
 [`min()`](https://zed.brimdata.io/docs/language/aggregates/min),
 [`max()`](https://zed.brimdata.io/docs/language/aggregates/max),
 [`count()`](https://zed.brimdata.io/docs/language/aggregates/count), or
-[`sum()`](https://zed.brimdata.io/docs/language/aggregates/sum).
+[`sum()`](https://zed.brimdata.io/docs/language/aggregates/sum) to each set of
+raw points.
 
 To illustrate this example, we'll use a data source of logged
 [HTTP traffic](https://github.com/brimdata/zed-sample-data/blob/main/zeek-default/http.log.gz)
@@ -298,13 +351,13 @@ in observed requests over time.
 
 In the query we'll construct, the use of Grafana's
 [`$__interval`](https://grafana.com/docs/grafana/latest/dashboards/variables/add-template-variables/#__interval)
-varaible is key. The value for this variable that Grafana changes based on the
-current plot width slides easily into the `span` parameter of Zed's
-[`bucket()` function](https://zed.brimdata.io/docs/language/functions/bucket).
+variable is essential. The value for this variable is changed automatically by
+Grafana based on the current plot width and slides easily into the `span`
+parameter of Zed's [`bucket()` function](https://zed.brimdata.io/docs/language/functions/bucket).
 
-We'll once again start by creating a pool and loading our test data. Since
+We'll once again start by creating a pool and loading our raw test data. Since
 this data already has a `time`-typed field called `ts`, we don't need to
-perform the same preprocessing we did previously.
+perform the same time-related preprocessing we did previously.
 
 ```
 $ zed create http
@@ -390,3 +443,7 @@ and not in any way [packaged or distributed](https://grafana.com/docs/grafana/la
 Grafana environments.
 
 # Appendix: Converting between the two approaches
+
+Debug tips
+- Take the query out of the Query Inspector and run it with `zed query` or in Brim/Zui. Some common mistakes:
+Your timestamp field might not be correct
