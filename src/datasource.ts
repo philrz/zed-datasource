@@ -7,10 +7,9 @@ import {
   FieldType,
   DateTime,
 } from '@grafana/data';
-
 import { getBackendSrv, getTemplateSrv } from '@grafana/runtime';
-
 import { MyQuery, MyDataSourceOptions } from './types';
+import { lastValueFrom } from 'rxjs';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   url: string; // It's not clear to me why I needed this but not "annotations: object;"
@@ -30,11 +29,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     const rangeTo = to.toISOString();
 
     if (pool === undefined) {
-      const pools = await getBackendSrv().datasourceRequest({
+      const poolsObservable = getBackendSrv().fetch<Array<{}>>({
         method: 'POST',
         url: this.url + '/query',
         data: { query: 'from :pools | cut name' },
       });
+      const pools = await lastValueFrom(poolsObservable);
       if (pools.data.length === 0) {
         throw new Error('No pools found in lake at ' + this.url);
       } else {
@@ -74,11 +74,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     // Once we move the plugin to the Zealot client we should be able to do
     // the same.
     const shapeQuery = finalQuery + ' | by typeof(this) | count() | yield count';
-    const shapeCount = await getBackendSrv().datasourceRequest({
+    const shapeCountObservable = await getBackendSrv().fetch<Array<{}>>({
       method: 'POST',
       url: this.url + '/query',
       data: { query: shapeQuery },
     });
+    const shapeCount = await lastValueFrom(shapeCountObservable);
     if (shapeCount.data.length === 0) {
       throw new Error('No data points found to plot in this time range');
     } else if (shapeCount.data[0] > 1) {
@@ -90,11 +91,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     // indicated that if there's multiple time-typed fields Grafana will use
     // the leftmost one.
     const frameQuery = finalQuery + ' | head 1 | over this =>  ( yield {key:key[0],type:typeof(value)} )';
-    const fieldsInfo = await getBackendSrv().datasourceRequest({
+    const fieldsInfoObservable = await getBackendSrv().fetch<Array<{}>>({
       method: 'POST',
       url: this.url + '/query',
       data: { query: frameQuery },
     });
+    const fieldsInfo = await lastValueFrom(fieldsInfoObservable);
     console.log('fieldsInfo:');
     console.log(fieldsInfo);
     var frameFields: Array<{ name: string; type: FieldType }> = [];
@@ -149,12 +151,13 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     console.log('frameFields:');
     console.log(frameFields);
 
-    const result = await getBackendSrv().datasourceRequest({
+    const resultObservable = await getBackendSrv().fetch<Array<{}>>({
       method: 'POST',
       url: this.url + '/query',
       data: { query: finalQuery },
     });
 
+    const result = await lastValueFrom(resultObservable);
     return { frameFields: frameFields, response: result };
   }
 
