@@ -84,9 +84,9 @@ help achieve this:
 1. **The field used as the timestamp for your time-series data should ideally be
 your [pool key](https://zed.brimdata.io/docs/commands/zed#143-pool-key).**
 
-   This way time range portion of queries initiated via the Grafana dashboard
-   will scan only the minimal number of data objects in the Zed lake that are
-   relevant to the query.
+   With this pool configruation, the time range portion of queries initiated
+   via the Grafana dashboard will scan only the minimal number of data
+   objects in the Zed lake relevant to the query.
 
 2. **If possible, use `ts` as the name for your timestamp field.**
 
@@ -103,7 +103,7 @@ your [pool key](https://zed.brimdata.io/docs/commands/zed#143-pool-key).**
    the [`cut` operator](https://zed.brimdata.io/docs/language/operators/cut)
    to trim the set of fields returned by the query or the
    [`fuse` operator](https://zed.brimdata.io/docs/language/operators/fuse) to
-   combine the entire query result into a singe, wider shape.
+   combine the entire query result into a single, wider shape.
 
 4. **Store data in top-level fields of primitive types.**
 
@@ -127,7 +127,7 @@ be used. If your lake is listening elsewhere (e.g., with Zui Insiders it's at
 http://localhost:9988) change the URL setting appropriately. When
 **Save & test** is clicked, the plugin will attempt to return the value from
 check the lake's `/version` endpoint. If successful, the plugin is ready for
-use in dashbard panel queries.
+use in dashboard panel queries.
 
 ![Configure and Test Zed Data Source](src/img/config-zed-data-source.png)
 
@@ -173,7 +173,7 @@ begins life as a mere string and therefore should be converted to the Zed
 to be used in time range selections in Grafana that will then be used in the
 generated Zed queries that gather points for plotting.
 
-Taking this into account, we'll perform some preprocessing with with `zq` to
+Taking this into account, we'll perform some preprocessing with `zq` to
 prepare the timestamp field and also isolate a subset of the fields, then
 ultimately load the data into a pool in our Zed lake. For convenience, we'll
 use `ts` as the name of the converted time field since this is the plugin's
@@ -401,7 +401,7 @@ button and click **Refresh** on the **Query** tab. Here we can see the full
 query assembled by the plugin and sent to the Zed lake API based on the
 current panel settings. We can see that the `$__interval` variable was
 replaced with a duration string. If you zoom in/out to change the current time
-range for the plot and recheck the Query Inspector, you'l see this value
+range for the plot and recheck the Query Inspector, you'll see this value
 change.
 
 ![Query inspector](src/img/query-inspector.png)
@@ -478,7 +478,7 @@ feature can be used to overlay details pulled from a Zed lake onto a
 series plot.
 
 As an example, that builds on top of our plot that counted HTTP methods, the
-following query creates a custom timestamped field called `msg`that populates
+following query creates a custom timestamped field called `msg` that populates
 an annotation marking each time a user accessed the Google web site.
 
 ```
@@ -535,7 +535,7 @@ plugin was written while following the Grafana documentation to
 [build a data source plugin](https://grafana.com/tutorials/build-a-data-source-plugin/).
 Per common practice, please [open an issue](https://github.com/philrz/zed-datasource/issues)
 before sending a pull request.  If you think your ideas might benefit from
-some refinementrefinement via Q&A, come talk to us on [Slack](https://www.brimdata.io/join-slack/)
+some refinement via Q&A, come talk to us on [Slack](https://www.brimdata.io/join-slack/)
 
 ## Join the Community
 
