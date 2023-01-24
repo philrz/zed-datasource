@@ -361,12 +361,108 @@ perform the same preprocessing of the timestamp we did previously.
 
 ```
 $ zed create http
+pool created: http 2KkaG0Ms5mNM68kwXYbSj8tRciG
 
 $ zq "get https://github.com/brimdata/zed-sample-data/blob/main/zeek-default/http.log.gz?raw=true" \
   | zed -use http load -
 (1/1) 8.30MB 8.30MB/s
 2KbzmcybYySkykAkYxTdYsNbL5o committed
 ```
+
+Below is our example aggregation query, followed by the completed panel shown
+in Grafana.
+
+```
+count() by ts:=bucket(ts,$__interval),method
+| map(|{method:count}|) by ts
+| over map with time=ts => (
+  yield {key:[key],value}
+  | collect(this)
+  | yield collect
+  | unflatten(this)
+  | put ts:=time
+)
+| fuse
+```
+
+![HTTP method count panel](src/img/http-method-count.png)
+
+To see the effect of the `$__interval` variable, click the **Query Inspector**
+button and click **Refresh** on the **Query** tab. Here we can see the full
+query assembled by the plugin and sent to the Zed lake API based on the
+current panel settings. We can see that the `$__interval` variable was
+replaced with a duration string. If you zoom in/out to change the current time
+range for the plot and recheck the Query Inspector, you'l see this value
+change.
+
+![Query inspector](src/img/query-inspector.png)
+
+To understand what the rest of the Zed is doing, let's look at a sample of
+data from outside Grafana starting with just the aggregation.
+
+```
+$ zed query -z 'from http
+                | count() by ts:=bucket(ts,1s),method
+                | sort ts'
+
+{ts:2018-03-24T17:15:20Z,method:"GET",count:63(uint64)}
+{ts:2018-03-24T17:15:20Z,method:"POST",count:1(uint64)}
+{ts:2018-03-24T17:15:20Z,method:"PUT",count:1(uint64)}
+{ts:2018-03-24T17:15:20Z,method:"OPTIONS",count:1(uint64)}
+{ts:2018-03-24T17:15:21Z,method:"HEAD",count:1(uint64)}
+{ts:2018-03-24T17:15:21Z,method:"GET",count:35(uint64)}
+{ts:2018-03-24T17:15:21Z,method:"PRI",count:1(uint64)}
+...
+```
+
+Two things stand out here:
+
+1. The timestamps are repeated in what's effectively the
+   [one row per metric](#one-row-per-metric) approach discussed above. For
+   this reason in the next several lines of Zed we reuse the
+   [idiom shown previously](#converting-between-approaches) to transform
+   to the second approach we discussed that consolidate all metrics for a
+   timestamp into the same row.
+
+2. The HTTP methods vary per timestamp. For this reason we apply `fuse` at the
+   end of our Zed to widen each record returned in the query response and
+   add `null` values for methods that did not appear during a time interval.
+   If we'd skipped the `fuse` we'd be attempting to plot multiple shapes and
+   the plugin would kick back an error message (try it!)
+
+Applying our full query and looking at a few lines of output, we can see the
+effect.
+
+```
+$ zed query -Z 'from http
+                | count() by ts:=bucket(ts,1s),method
+                | map(|{method:count}|) by ts
+                | over map with time=ts => (
+                  yield {key:[key],value}
+                  | collect(this)
+                  | yield collect
+                  | unflatten(this)
+                  | put ts:=time
+                )
+                | fuse
+                | sort ts'
+
+{
+    POST: 1 (uint64),
+    ts: 2018-03-24T17:15:20Z,
+    GET: 63 (uint64),
+    HEAD: null (uint64),
+...
+```
+
+You may notice lots of "dots" in the screenshots, which are indicative of the
+sparse appearance of rarely-used HTTP methods surrounded by many `null` points.
+To consider options for representing such data, refer to Grafana's
+documentation for the
+[connect null values](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/time-series/#connect-null-values)
+setting.
+
+## Annotations
 
 
 # Contributing
