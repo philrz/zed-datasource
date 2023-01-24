@@ -4,6 +4,24 @@ This repository contains a prototype [data source plugin](https://grafana.com/gr
 for [Grafana](https://grafana.com/) to allow the plotting of time-series data
 that's stored in [Zed lakes](https://zed.brimdata.io/docs/commands/zed/).
 
+---
+  * [Installation](#installation)
+  * [Zed & CORS](#zed--cors)
+  * [Best Practices](#best-practices)
+  * [Configuration](#configuration)
+  * [Example Usage in Dashboards](#example-usage-in-dashboards)
+    + [One row per metric](#one-row-per-metric)
+    + [Each measurement (with lot of metrics) in its own row](#each-measurement-with-lot-of-metrics-in-its-own-row)
+    + [Converting between approaches](#converting-between-approaches)
+    + [Variables](#variables)
+    + [Aggregations and the `$__interval` variable](#aggregations-and-the-__interval-variable)
+    + [Annotations](#annotations)
+    + [Logs](#logs)
+  * [Debugging](#debugging)
+  * [Contributing](#contributing)
+  * [Join the Community](#join-the-community)
+---
+
 ## Installation
 
 As it's a prototype, these installation instructions effectively show how to
@@ -84,7 +102,7 @@ help achieve this:
 1. **The field used as the timestamp for your time-series data should ideally be
 your [pool key](https://zed.brimdata.io/docs/commands/zed#143-pool-key).**
 
-   With this pool configruation, the time range portion of queries initiated
+   With this pool configuration, the time range portion of queries initiated
    via the Grafana dashboard will scan only the minimal number of data
    objects in the Zed lake relevant to the query.
 
