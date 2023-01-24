@@ -66,9 +66,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       zedQuery +
       ' | sort ' +
       timeField;
-    console.log('Zed Query before applying variables: ' + wholeQuery);
+
     const finalQuery = getTemplateSrv().replace(wholeQuery, options.scopedVars, 'csv');
-    console.log('Zed Query after applying variables: ' + finalQuery);
 
     // The Zui app is able to show its "Shapes:" count withut a separate query.
     // Once we move the plugin to the Zealot client we should be able to do
@@ -97,8 +96,6 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       data: { query: frameQuery },
     });
     const fieldsInfo = await lastValueFrom(fieldsInfoObservable);
-    console.log('fieldsInfo:');
-    console.log(fieldsInfo);
     var frameFields: Array<{ name: string; type: FieldType }> = [];
     fieldsInfo.data.forEach((point: any) => {
       // Black box testing has shown that a field named the empty string ""
@@ -149,8 +146,6 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         frameFields.push({ name: point.key, type: FieldType.boolean });
       }
     });
-    console.log('frameFields:');
-    console.log(frameFields);
 
     const resultObservable = await getBackendSrv().fetch<Array<{}>>({
       method: 'POST',
