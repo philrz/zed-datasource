@@ -330,6 +330,10 @@ $ zed query -Z 'from prices1
 ...
 ```
 
+In the future the functionality of this idiom may be available in more
+succinct Zed syntax. Issue [zed/4332](https://github.com/brimdata/zed/issues/4332)
+tracks this enhancement.
+
 ### Variables
 
 The plugin does not yet support [query variables](https://grafana.com/docs/grafana/latest/developers/plugins/add-support-for-variables/#add-support-for-query-variables-to-your-data-source)
