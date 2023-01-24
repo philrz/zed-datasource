@@ -1,4 +1,4 @@
-# Grafana Zed Data Source Plugin
+# Zed Data Source for Grafana
 
 This repository contains a prototype [data source plugin](https://grafana.com/grafana/plugins/?type=datasource)
 for [Grafana](https://grafana.com/) to allow the plotting of time-series data
