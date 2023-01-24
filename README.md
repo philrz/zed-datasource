@@ -4,7 +4,7 @@ This repository contains a prototype [data source plugin](https://grafana.com/gr
 for [Grafana](https://grafana.com/) to allow the plotting of time-series data
 that's stored in [Zed lakes](https://zed.brimdata.io/docs/commands/zed/).
 
-# Installation
+## Installation
 
 As it's a prototype, these installation instructions effectively show how to
 get the plugin running in a way that would allow for its further development.
@@ -51,7 +51,7 @@ plugin directory
 Grafana should now be listening on http://localhost:3000 and you can login with
 username `admin` and password `admin`.
 
-# Zed & CORS
+## Zed & CORS
 
 Unfortunately, due to [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS),
 this plugin cannot currently interact with the API for an out-of-the-box Zed lake.
@@ -69,7 +69,7 @@ make build
 ./dist/zed serve -lake scratch
 ```
 
-# Best Practices
+## Best Practices
 
 Zed is not a purpose-built time-series database. However, as a general data
 platform, it can absolutely be used for storage and query of time-series data
@@ -105,10 +105,19 @@ your [pool key](https://zed.brimdata.io/docs/commands/zed#143-pool-key).**
    [`fuse` operator](https://zed.brimdata.io/docs/language/operators/fuse) to
    combine the entire query result into a singe, wider shape.
 
+4. **Store data in top-level fields of primitive types.**
+
+   Of the fields in a response to a Zed query, the values passed on to Grafana
+   by the plugin will be top-level fields of Zed's
+   [primitive types](https://zed.brimdata.io/docs/formats/zed#1-primitive-types).
+   If you need to use values from complex types in Grafana, make them available
+   as top-level fields, e.g., by using the
+   [`put` operator](https://zed.brimdata.io/docs/language/operators/put).
+
 Next we'll walk through some real world examples that leverage these best
 practices.
 
-# Configuration
+## Configuration
 
 The Zed data source can be added in Grafana via the
 **Configuration > Data Sources** menu. If a lake service is listening locally
@@ -122,7 +131,7 @@ use in dashbard panel queries.
 
 ![Configure and Test Zed Data Source](src/img/config-zed-data-source.png)
 
-# Example Usage in Dashboards
+## Example Usage in Dashboards
 
 As described [here](https://kb.altinity.com/altinity-kb-schema-design/best-schema-for-storing-many-metrics-registered-from-the-single-source/),
 different schema approaches are often used for storing time-series data. The Zed
@@ -130,7 +139,7 @@ plugin can adapt to multiple approaches, but the Zed query used in the Grafana
 panel will differ. In each of the following sections we'll plot some sample
 time-series data to illustrate the concepts.
 
-## One row per metric
+### One row per metric
 
 An example that uses this approach is the
 [Weekly fuel prices (all data)](https://dgsaie.mise.gov.it/open_data_export.php?export-id=4&export-type=csv)
@@ -208,7 +217,7 @@ PRODUCT_NAME=="Automotive gas oil" | rename this["Automotive gas oil"]:=PRICE
 
 ![Example with one row per metric](src/img/prices1.png)
 
-## Each measurement (with lot of metrics) in its own row
+### Each measurement (with lot of metrics) in its own row
 
 If our data happens to be in the format with multiple metrics per row, it
 becomes easy to plot with a single query. We can observe this by working with
@@ -272,7 +281,7 @@ rename this["Euro Super 95"] := this["EURO-SUPER_95"],
        this["Heavy Fuel Oil"]:=this["HEAVY_FUEL_OIL"]
 ```
 
-## Converting between approaches
+### Converting between approaches
 
 Now that we've seen the second approach makes it easier to plot, if you find
 yourself with data that's already stored using the first approach, you could use
@@ -303,7 +312,7 @@ $ zed query -Z 'from prices1
 ...
 ```
 
-## Variables
+### Variables
 
 The plugin does not yet support [query variables](https://grafana.com/docs/grafana/latest/developers/plugins/add-support-for-variables/#add-support-for-query-variables-to-your-data-source)
 to populate [dashboard variables](https://grafana.com/docs/grafana/latest/dashboards/variables/)
@@ -327,7 +336,7 @@ to its use of the character `-`.
 
 ![Custom variable in panel](src/img/custom-variable-in-panel.png)
 
-## Aggregations and the `$__interval` variable
+### Aggregations and the `$__interval` variable
 
 The examples shown thus far assume that all points in the selected time range
 should be plotted at their precise values. However, in practice, screen width
@@ -462,84 +471,73 @@ documentation for the
 [connect null values](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/time-series/#connect-null-values)
 setting.
 
-## Annotations
+### Annotations
 
+Grafana's [annotations](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/annotate-visualizations/#querying-other-data-sources)
+feature can be used to overlay details pulled from a Zed lake onto a
+series plot.
 
-# Contributing
+As an example, that builds on top of our plot that counted HTTP methods, the
+following query creates a custom timestamped field called `msg`that populates
+an annotation marking each time a user accessed the Google web site.
 
-The plugin was written while following the Grafana documentation to
+```
+host=="www.google.com"
+| yield {ts, msg: "client " + string(id.orig_h) + " accessed " + host}
+```
+
+![Configure annotation](src/img/configure-annotation.png)
+
+When we refresh our dashboard panel and hover the mouse pointer over the red
+marker at the bottom of each dotted vertical line, we can see the custom
+message.
+
+![Hovering over annotation](src/img/annotation-hover.png)
+
+### Logs
+
+Due to the previously-described limitations with only handling top-level
+fields of primitive Zed types, the plugin is probably not well-suited for
+general use with Grafana's
+[Logs panel](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/logs/).
+However, the plugin is configured to permit its use with the logs panel and
+you may find it useful for examining string-based fields.
+
+In this example we create a simple logs panel that shows the details of the
+same HTTP events for accessing the Google web site that we used as the basis
+for our annotations query.
+
+![Logs panel](src/img/logs-panel.png)
+
+## Debugging
+
+When things are going wrong, the first thing to check is for an alert shown
+when you hover the mouse pointer over a red triangle in the upper-left corner
+of a panel. The errors you may see here are described on this page and should
+be self-explanatory.
+
+![Hovering over an error message.](src/img/error-hover.png)
+
+If you can't make sense of the error message, you may find it helpful to look
+in Grafana's **Query Inspector** as shown [above](#aggregations-and-the-__interval-variable).
+The assembled query shown can then be executed outside of Grafana using
+`zed query` or in the Brim/Zui app to narrow down if it's a problem with how
+the query is constructed or if it's a bug/limitation in the plugin or Grafana.
+
+If you're still stuck, come talk to us on the `#grafana` channel on the
+[Brim public Slack](https://www.brimdata.io/join-slack/) or
+[open an issue](https://github.com/philrz/zed-datasource/issues).
+
+## Contributing
+
+Contributions are welcomed! If you need some tips on getting started, this
+plugin was written while following the Grafana documentation to
 [build a data source plugin](https://grafana.com/tutorials/build-a-data-source-plugin/).
-My JavaScript skills are pretty basic and I have no prior experience developing
-Grafana plugins, so I know it has limitations. While interest in the plugin may
-inspire me to continue enhancing it, I imagine someone with better skills and
-experience could make progress much quicker. Please open an
-[issue](https://github.com/philrz/zed-datasource/issues) before sending a pull
-request.
+Per common practice, please [open an issue](https://github.com/philrz/zed-datasource/issues)
+before sending a pull request.  If you think your ideas might benefit from
+some refinementrefinement via Q&A, come talk to us on [Slack](https://www.brimdata.io/join-slack/)
 
-# To Do
+## Join the Community
 
-Having been a user of other Grafana data sources in the past, I can see some
-glaring omissions in this one that form an immediate to-do list if I or anyone
-else feels inspired to add further enhancements.
-
-First, I've not yet taken steps to cover the recommended follow-on tasks from
-the [Grafana docs](https://grafana.com/tutorials/build-a-data-source-plugin/)
-to add support for [variables](https://grafana.com/docs/grafana/latest/developers/plugins/add-support-for-variables/),
-[annotations](https://grafana.com/docs/grafana/latest/developers/plugins/add-support-for-annotations/),
-and [Explore queries](https://grafana.com/docs/grafana/latest/developers/plugins/add-support-for-explore-queries/).
-Also, while Grafana has traditionally been focused on time-series data, their
-docs note that a plugin can also be a [logs data source](https://grafana.com/docs/grafana/latest/developers/plugins/build-a-logs-data-source-plugin/). Given
-the diverse data that can be stored in Zed lakes, this would also seem to be a
-logical enhancement.
-
-Specifically for the case of variables, I suspect explicit support for
-[`$__interval`](https://grafana.com/docs/grafana/latest/variables/variable-types/global-variables/#__interval)
-would be helpful. Right now all time bucketing must be expressed explicitly
-in the Zed query itself, but proper support for `$__interval` should make it
-possible to set the bucketing dynamically based on the pixels available in a
-given panel.
-
-Another fundamental limitation of the plugin currently is that it's only
-capable of handling one time-series per query. Consider a Zed query such as:
-
-```
-$ zed query -use http -f table 'count() by every(1s),method'
-ts                   method           count
-2018-03-24T17:15:20Z OPTIONS          1
-2018-03-24T17:15:20Z POST             1
-2018-03-24T17:15:20Z GET              63
-2018-03-24T17:15:20Z PUT              1
-2018-03-24T17:15:21Z GET              35
-2018-03-24T17:15:21Z HEAD             1
-2018-03-24T17:15:21Z PRI              1
-...
-```
-
-More advanced plugins expose knobs that would allow the easy separation of this
-response into multiple separate time-series that could each be plotted with an
-appropriate label, e.g., based on the different HTTP methods in this case.
-Until the Zed plugin is enhanced to handle this, for now you'd need to create
-one query per time-series, e.g.:
-
-```
-$ zed query -use http -f table 'count() where method=="GET" by every(1s)'
-ts                   count
-2018-03-24T17:15:20Z 63
-2018-03-24T17:15:21Z 35
-
-$ zed query -use http -f table 'count() where method=="POST" by every(1s)'
-ts                   count
-2018-03-24T17:15:20Z 1
-2018-03-24T17:15:21Z 0
-```
-
-Finally, due to its prototype nature, the plugin is currently
-[unsigned](https://grafana.com/docs/grafana/latest/developers/plugins/sign-a-plugin/)
-and not in any way [packaged or distributed](https://grafana.com/docs/grafana/latest/developers/plugins/package-a-plugin/) for easy installation in non-test
-Grafana environments.
-
-# Appendix: Converting between the two approaches
-
-Debug tips
-- Take the query out of the Query Inspector and run it with `zed query` or in Brim/Zui. Some common mistakes:
-Your timestamp field might not be correct
+Join our [public Slack](https://www.brimdata.io/join-slack/) workspace for
+announcements, Q&A, and to trade tips!

@@ -139,7 +139,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         point.type === '<ip>' ||
         point.type === '<net>' ||
         point.type === '<type>' ||
-        point.type === '<bytes>'
+        point.type === '<bytes>' ||
+        point.type === '<duration>'
       ) {
         frameFields.push({ name: point.key, type: FieldType.string });
       } else if (point.type === '<time>') {
