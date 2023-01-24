@@ -120,7 +120,7 @@ http://localhost:9988) change the URL setting appropriately. When
 check the lake's `/version` endpoint. If successful, the plugin is ready for
 use in dashbard panel queries.
 
-![Configure and Test Zed Data Source](config-zed-data-source.png)
+![Configure and Test Zed Data Source](src/img/config-zed-data-source.png)
 
 # Example Usage in Dashboards
 
@@ -206,7 +206,7 @@ shown in Grafana.
 PRODUCT_NAME=="Automotive gas oil" | rename this["Automotive gas oil"]:=PRICE
 ```
 
-![Example with one row per metric](prices1.png)
+![Example with one row per metric](src/img/prices1.png)
 
 ## Each measurement (with lot of metrics) in its own row
 
@@ -259,7 +259,7 @@ chart if we let the plugin use its default Zed query (`*`) that pulls all points
 from the pool. The only setting we had to change in our panel configuration was
 to specify the pool name "prices2".
 
-![Example with many metrics per row](prices2.png)
+![Example with many metrics per row](src/img/prices2.png)
 
 If we wanted prettier names in the legend, we could add a Zed query to our
 panel config such as:
@@ -277,7 +277,7 @@ rename this["Euro Super 95"] := this["EURO-SUPER_95"],
 Now that we've seen the second approach makes it easier to plot, if you find
 yourself with data that's already stored using the first approach, you could use
 Zed like what's shown below to convert to the second approach. This idiom could
-be used to preprocess the data before loading it into yet another pool, or you
+be used to preprocess the data before loading it into yet another pool or you
 could use it as part of a Zed query in your Grafana panel config.
 
 ```
@@ -306,26 +306,26 @@ $ zed query -Z 'from prices1
 ## Variables
 
 The plugin does not yet support [query variables](https://grafana.com/docs/grafana/latest/developers/plugins/add-support-for-variables/#add-support-for-query-variables-to-your-data-source)
-to populate dashboard [variables](https://grafana.com/docs/grafana/latest/dashboards/variables/)
-with values pulled using Zed queries. However, in the meantime, queries in
-panels can use variables made up of custom sets of values defined in the
+to populate [dashboard variables](https://grafana.com/docs/grafana/latest/dashboards/variables/)
+with values pulled from a pool using Zed queries. However, in the meantime,
+queries in panels can use variables made up of custom values defined in the
 dashboard settings as long as the set of picked values can be expanded into
 syntactically correct Zed.
 
 Building on our prior example, here we've defined a multi-value variable called
 "fuels" made up of the six categories of our data.
 
-![Img3](img3.png)
+![Custom variable config](src/img/custom-variable-config.png)
 
 Returning to our dashboard, we now can enter a Zed query that uses
 [`cut` operator](https://zed.brimdata.io/docs/language/operators/cut) to
-isolate only the timestamp field and the expanded variable that holds our set
-of picked fuels. Notice that we once again made use of
-[field dereferencing with indexing](https://zed.brimdata.io/docs/language/overview#75-field-dereference)
+isolate only the timestamp field and variable reference that expands into a
+comma-separated field list required by `cut`. Notice that we once again made
+use of [field dereferencing with indexing](https://zed.brimdata.io/docs/language/overview#75-field-dereference)
 for the field `EURO-SUPER_95` since it can't be referenced as an identifier due
 to its use of the character `-`.
 
-![Img3](img4.png)
+![Custom variable in panel](src/img/custom-variable-in-panel.png)
 
 ## Aggregations and the `$__interval` variable
 
@@ -349,7 +349,7 @@ found in the [zed-sample-data repository](https://github.com/brimdata/zed-sample
 In our example we'll plot the count of [HTTP methods](https://www.rfc-editor.org/rfc/rfc7231#page-21)
 in observed requests over time.
 
-In the query we'll construct, the use of Grafana's
+In the query we'll construct, the use of Grafana's built-in
 [`$__interval`](https://grafana.com/docs/grafana/latest/dashboards/variables/add-template-variables/#__interval)
 variable is essential. The value for this variable is changed automatically by
 Grafana based on the current plot width and slides easily into the `span`
@@ -357,7 +357,7 @@ parameter of Zed's [`bucket()` function](https://zed.brimdata.io/docs/language/f
 
 We'll once again start by creating a pool and loading our raw test data. Since
 this data already has a `time`-typed field called `ts`, we don't need to
-perform the same time-related preprocessing we did previously.
+perform the same preprocessing of the timestamp we did previously.
 
 ```
 $ zed create http
