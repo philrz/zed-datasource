@@ -1,6 +1,6 @@
 # Zed Data Source for Grafana
 
-This repository contains a prototype [data source plugin](https://grafana.com/grafana/plugins/?type=datasource)
+This repository contains a [data source plugin](https://grafana.com/grafana/plugins/?type=datasource)
 for [Grafana](https://grafana.com/) to allow the plotting of time-series data
 that's stored in [Zed lakes](https://zed.brimdata.io/docs/commands/zed/).
 
@@ -12,7 +12,7 @@ that's stored in [Zed lakes](https://zed.brimdata.io/docs/commands/zed/).
   * [Example Usage in Dashboards](#example-usage-in-dashboards)
     + [One row per metric](#one-row-per-metric)
     + [Each measurement (with lot of metrics) in its own row](#each-measurement-with-lot-of-metrics-in-its-own-row)
-    + [Converting between approaches](#converting-between-approaches)
+    + [Transform between approaches](#transform-between-approaches)
     + [Variables](#variables)
     + [Aggregations and the `$__interval` variable](#aggregations-and-the-__interval-variable)
     + [Annotations](#annotations)
@@ -24,9 +24,10 @@ that's stored in [Zed lakes](https://zed.brimdata.io/docs/commands/zed/).
 
 ## Installation
 
-As it's a prototype, these installation instructions effectively show how to
-get the plugin running in a way that would allow for its further development.
-The instructions below show how to do this with macOS.
+As the plugin has not yet been signed and distributed, these installation
+instructions effectively show how to get the plugin running in a way that
+would allow for its further development. The instructions below show how
+to do this with macOS.
 
 1. Install Grafana and needed development tools
 
@@ -89,12 +90,12 @@ make build
 
 ## Best Practices
 
-Zed is not a purpose-built time-series database. However, as a general data
-platform, it can absolutely be used for storage and query of time-series data
-at moderate scale.
+A Zed lake is not a purpose-built time-series database. However, as a general
+data platform, it can absolutely be used for storage and query of time-series
+data at moderate scale.
 
 In its current state, the plugin relies on the use of Zed queries that
-prepare data for easy conversion to the
+prepare data for easy transformation to the
 [data frames](https://grafana.com/docs/grafana/latest/developers/plugins/data-frames/)
 that Grafana ultimately uses for rendering plots. Some best practices that
 help achieve this:
@@ -128,8 +129,8 @@ your [pool key](https://zed.brimdata.io/docs/commands/zed#143-pool-key).**
    Of the fields in a response to a Zed query, the values passed on to Grafana
    by the plugin will be top-level fields of Zed's
    [primitive types](https://zed.brimdata.io/docs/formats/zed#1-primitive-types).
-   If you need to use values from complex types in Grafana, make them available
-   as top-level fields, e.g., by using the
+   If you need to use values from complex types in Grafana, modify your Zed
+   query to make them available as top-level fields, e.g., by using the
    [`put` operator](https://zed.brimdata.io/docs/language/operators/put).
 
 Next we'll walk through some real world examples that leverage these best
@@ -140,12 +141,13 @@ practices.
 The Zed data source can be added in Grafana via the
 **Configuration > Data Sources** menu. If a lake service is listening locally
 on the default TCP port `9867` (as is typical for the lake launched by the
-Brim/Zui app or when `zed serve` is run by hand) the default URL setting can
-be used. If your lake is listening elsewhere (e.g., with Zui Insiders it's at
-http://localhost:9988) change the URL setting appropriately. When
+[Brim/Zui app](https://github.com/brimdata/brim) or when
+[`zed serve`](https://zed.brimdata.io/docs/commands/zed#13-zed-command-personalities) is run by hand) the default URL setting can
+be used. If your lake is listening elsewhere (e.g., with [Zui Insiders](https://github.com/brimdata/zui-insiders)
+it's at http://localhost:9988) change the URL setting appropriately. When
 **Save & test** is clicked, the plugin will attempt to return the value from
-check the lake's `/version` endpoint. If successful, the plugin is ready for
-use in dashboard panel queries.
+the lake's `/version` endpoint. If successful, the version will be shown and
+the plugin is ready for use in dashboard panel queries.
 
 ![Configure and Test Zed Data Source](src/img/config-zed-data-source.png)
 
@@ -186,15 +188,15 @@ SURVEY_DATE,PRODUCT_ID,PRODUCT_NAME,PRICE,VAT,EXCISE,NET,CHANGE
 
 Per the approach, we see that the date stamp is repeated for the measurement of
 each of the six different fuel types. Also, being CSV data, this date field
-begins life as a mere string and therefore should be converted to the Zed
-`time` type as we're storing it in the lake. This will allow the values
+begins life as a mere string and therefore should be transformed to the Zed
+`time` type as we store it in the lake. This will allow the values
 to be used in time range selections in Grafana that will then be used in the
 generated Zed queries that gather points for plotting.
 
-Taking this into account, we'll perform some preprocessing with `zq` to
+Taking this into account, we'll perform some preprocessing with [`zq`](https://zed.brimdata.io/docs/commands/zq) to
 prepare the timestamp field and also isolate a subset of the fields, then
 ultimately load the data into a pool in our Zed lake. For convenience, we'll
-use `ts` as the name of the converted time field since this is the plugin's
+use `ts` as the name of the transformed time field since this is the plugin's
 default.
 
 ```
@@ -207,7 +209,7 @@ $ zq 'cut ts:=time(SURVEY_DATE),PRODUCT_NAME,PRICE' all_prices.csv \
 2KkHZEIfCdlCQJcgO9TAGT8cNpz committed
 ```
 
-Reading back a sampling of our data, we can see the successful conversion.
+Reading back a sampling of our data, we can see the successful transform.
 
 ```
 $ zed query -Z 'from prices1 | sample'
@@ -257,7 +259,7 @@ SURVEY_DATE,EURO-SUPER_95,AUTOMOTIVE_GAS_OIL,LPG,HEATING_GAS_OIL,RESIDUAL_FUEL_O
 
 As we see, there's now a separate column in the CSV file for each category of fuel
 and each row of measurements appears with a single, shared date stamp. We'll
-create a separate pool and once again convert the date stamp to a Zed `time`
+create a separate pool and once again transform the date stamp to a Zed `time`
 field as we load it into our lake.
 
 ```
@@ -293,17 +295,17 @@ panel config such as:
 
 ```
 rename this["Euro Super 95"] := this["EURO-SUPER_95"],
-       this["Automotive Gas Oil"]:=this["AUTOMOTIVE_GAS_OIL"],
-       this["Heating Gas Oil"]:=this["HEATING_GAS_OIL"],
-       this["Residual Fuel Oil"]:=this["RESIDUAL_FUEL_OIL"],
-       this["Heavy Fuel Oil"]:=this["HEAVY_FUEL_OIL"]
+       this["Automotive Gas Oil"] := this["AUTOMOTIVE_GAS_OIL"],
+       this["Heating Gas Oil"] := this["HEATING_GAS_OIL"],
+       this["Residual Fuel Oil"] := this["RESIDUAL_FUEL_OIL"],
+       this["Heavy Fuel Oil"] := this["HEAVY_FUEL_OIL"]
 ```
 
-### Converting between approaches
+### Transform between approaches
 
 Now that we've seen the second approach makes it easier to plot, if you find
 yourself with data that's already stored using the first approach, you could use
-Zed like what's shown below to convert to the second approach. This idiom could
+Zed like what's shown below to transform to the second approach. This idiom could
 be used to preprocess the data before loading it into yet another pool or you
 could use it as part of a Zed query in your Grafana panel config.
 
@@ -330,9 +332,9 @@ $ zed query -Z 'from prices1
 ...
 ```
 
-In the future the functionality of this idiom may be available in more
-succinct Zed syntax. Issue [zed/4332](https://github.com/brimdata/zed/issues/4332)
-tracks this enhancement.
+In the future this functionality may be made available in more succinct Zed
+syntax. Issue [zed/4332](https://github.com/brimdata/zed/issues/4332) tracks
+this enhancement.
 
 ### Variables
 
@@ -420,11 +422,11 @@ count() by ts:=bucket(ts,$__interval),method
 
 To see the effect of the `$__interval` variable, click the **Query Inspector**
 button and click **Refresh** on the **Query** tab. Here we can see the full
-query assembled by the plugin and sent to the Zed lake API based on the
+query assembled by the plugin that was sent to the Zed lake API based on the
 current panel settings. We can see that the `$__interval` variable was
-replaced with a duration string. If you zoom in/out to change the current time
-range for the plot and recheck the Query Inspector, you'll see this value
-change.
+replaced with a duration string `1s` that reflects 1-second time buckets.
+If you zoom in/out to change the current time range for the plot and recheck
+the Query Inspector, you'll see this value change.
 
 ![Query inspector](src/img/query-inspector.png)
 
@@ -451,11 +453,13 @@ Two things stand out here:
 1. The timestamps are repeated in what's effectively the
    [one row per metric](#one-row-per-metric) approach discussed above. For
    this reason in the next several lines of Zed we reuse the
-   [idiom shown previously](#converting-between-approaches) to transform
-   to the second approach we discussed that consolidate all metrics for a
-   timestamp into the same row.
+   [idiom shown previously](#transform-between-approaches) to transform
+   to the approach that consolidates all metrics for a timestamp into the
+   same row.
 
-2. The HTTP methods vary per timestamp. For this reason we apply `fuse` at the
+2. The HTTP methods vary per timestamp, which is different from what we
+   saw with the fuel data where we always saw the same six fuel categories
+   reported for every timestamp. For this reason we apply `fuse` at the
    end of our Zed to widen each record returned in the query response and
    add `null` values for methods that did not appear during a time interval.
    If we'd skipped the `fuse` we'd be attempting to plot multiple shapes and
@@ -486,7 +490,7 @@ $ zed query -Z 'from http
 ...
 ```
 
-You may notice lots of "dots" in the screenshots, which are indicative of the
+You may notice lots of "dots" in the screenshot above, which are indicative of the
 sparse appearance of rarely-used HTTP methods surrounded by many `null` points.
 To consider options for representing such data, refer to Grafana's
 documentation for the
@@ -497,9 +501,9 @@ setting.
 
 Grafana's [annotations](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/annotate-visualizations/#querying-other-data-sources)
 feature can be used to overlay details pulled from a Zed lake onto a
-series plot.
+time-series plot.
 
-As an example, that builds on top of our plot that counted HTTP methods, the
+As an example that builds on top of our plot of counted HTTP methods, the
 following query creates a custom timestamped field called `msg` that populates
 an annotation marking each time a user accessed the Google web site.
 
@@ -522,12 +526,12 @@ Due to the previously-described limitations with only handling top-level
 fields of primitive Zed types, the plugin is probably not well-suited for
 general use with Grafana's
 [Logs panel](https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/logs/).
-However, the plugin is configured to permit its use with the logs panel and
-you may find it useful for examining string-based fields.
+However, the plugin is configured to permit this and you may find it useful
+for examining string-based fields.
 
 In this example we create a simple logs panel that shows the details of the
-same HTTP events for accessing the Google web site that we used as the basis
-for our annotations query.
+HTTP events for accessing the Google web site that we used as the basis for
+our annotations query.
 
 ![Logs panel](src/img/logs-panel.png)
 
@@ -535,8 +539,8 @@ for our annotations query.
 
 When things are going wrong, the first thing to check is for an alert shown
 when you hover the mouse pointer over a red triangle in the upper-left corner
-of a panel. The errors you may see here are described on this page and should
-be self-explanatory.
+of a panel. The errors you may see here are described in this README and
+should be self-explanatory.
 
 ![Hovering over an error message.](src/img/error-hover.png)
 
@@ -557,7 +561,7 @@ plugin was written while following the Grafana documentation to
 [build a data source plugin](https://grafana.com/tutorials/build-a-data-source-plugin/).
 Per common practice, please [open an issue](https://github.com/philrz/zed-datasource/issues)
 before sending a pull request.  If you think your ideas might benefit from
-some refinement via Q&A, come talk to us on [Slack](https://www.brimdata.io/join-slack/)
+some refinement via Q&A, come talk to us on [Slack](https://www.brimdata.io/join-slack/).
 
 ## Join the Community
 
