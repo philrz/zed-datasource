@@ -64,7 +64,7 @@ plugin directory
     cfg:default.paths.logs=/usr/local/var/log/grafana \
     cfg:default.paths.data=/usr/local/var/lib/grafana \
     cfg:default.paths.plugins="$HOME/grafana-plugins" \
-    cfg:default.plugins.allow_loading_unsigned_plugins=brim-data-zed
+    cfg:default.plugins.allow_loading_unsigned_plugins=grafana-zed-datasource
 ```
 
 Grafana should now be listening on http://localhost:3000 and you can login with

@@ -2,15 +2,15 @@
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
   "name": "Zed",
-  "id": "brim-data-zed",
+  "id": "grafana-zed-datasource",
   "metrics": true,
   "annotations": true,
   "logs": true,
   "info": {
-    "description": "Zed lake",
+    "description": "Support for queries from Zed lakes",
     "author": {
-      "name": "Phil Rzewski",
-      "url": "https://www.brimdata.io/"
+      "name": "Brim Data",
+      "url": "https://www.brimdata.io"
     },
     "keywords": [],
     "logos": {
